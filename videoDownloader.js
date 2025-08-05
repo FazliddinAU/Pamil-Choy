@@ -9,27 +9,35 @@ async function downloadAndSendVideo(bot, chatId, preferredVideo, options = {}) {
     return bot.sendMessage(chatId, '⚠️ Video URL mavjud emas.');
   }
 
-  const fileName = `video_${Date.now()}.mp4`;
-  const filePath = path.join(os.tmpdir(), fileName);
+  const outputPath = path.join(os.tmpdir(), `video_${Date.now()}.%(ext)s`);
   const videoUrl = preferredVideo.url;
 
   console.log('⬇️ Yuklash boshlanmoqda:', videoUrl);
+  console.log('📁 Saqlash manzili:', outputPath);
 
   try {
     await new Promise((resolve, reject) => {
-      const command = `yt-dlp -f best -o "${filePath}" "${videoUrl}"`;
+      const command = `yt-dlp -f best -o "${outputPath}" "${videoUrl}"`;
       exec(command, (error, stdout, stderr) => {
+        console.log('📝 yt-dlp stdout:', stdout);
+        console.error('🛑 yt-dlp stderr:', stderr);
+
         if (error) {
-          console.error('❌ yt-dlp xatolik:', stderr);
+          console.error('❌ yt-dlp xatolik:', error.message);
           return reject(new Error('yt-dlp orqali yuklab bo‘lmadi.'));
         }
-        console.log('✅ Video yuklandi.');
+
         resolve();
       });
     });
 
+    const tmpDir = os.tmpdir();
+    const baseName = path.basename(outputPath).split('.%')[0];
+    const downloadedFile = fs.readdirSync(tmpDir).find(f => f.startsWith(baseName));
+    const filePath = path.join(tmpDir, downloadedFile);
+
     if (!fs.existsSync(filePath)) {
-      throw new Error('❌ Fayl topilmadi');
+      throw new Error('❌ Yuklab olingan fayl topilmadi.');
     }
 
     console.log('📤 Video yuborilmoqda...');
@@ -39,8 +47,15 @@ async function downloadAndSendVideo(bot, chatId, preferredVideo, options = {}) {
     console.error('❌ Umumiy xatolik:', err.message);
     await bot.sendMessage(chatId, '❌ Videoni yuklashda yoki yuborishda xatolik yuz berdi.');
   } finally {
-    if (fs.existsSync(filePath)) {
-      fs.unlink(filePath, () => {});
+    try {
+      const tmpFiles = fs.readdirSync(os.tmpdir());
+      tmpFiles.forEach(file => {
+        if (file.includes('video_')) {
+          fs.unlinkSync(path.join(os.tmpdir(), file));
+        }
+      });
+    } catch (e) {
+      console.warn('⚠️ Faylni tozalashda xatolik:', e.message);
     }
   }
 }
