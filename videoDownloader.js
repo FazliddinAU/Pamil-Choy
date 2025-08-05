@@ -1,7 +1,7 @@
-const ytdl = require('ytdl-core');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const https = require('https');
 
 async function downloadAndSendVideo(bot, chatId, preferredVideo, options = {}) {
   if (!preferredVideo || !preferredVideo.url) {
@@ -10,24 +10,26 @@ async function downloadAndSendVideo(bot, chatId, preferredVideo, options = {}) {
   }
 
   const videoUrl = preferredVideo.url;
-
-  if (!ytdl.validateURL(videoUrl)) {
-    return bot.sendMessage(chatId, '❌ Noto‘g‘ri YouTube havolasi.');
-  }
-
   const fileName = `video_${Date.now()}.mp4`;
   const filePath = path.join(os.tmpdir(), fileName);
 
   console.log('⬇️ Yuklab olinmoqda:', videoUrl);
-  console.log('📁 Fayl manzili:', filePath);
 
   try {
-    const stream = ytdl(videoUrl, { quality: '18' }); 
     await new Promise((resolve, reject) => {
-      const writeStream = fs.createWriteStream(filePath);
-      stream.pipe(writeStream);
-      stream.on('error', reject);
-      writeStream.on('finish', resolve);
+      const file = fs.createWriteStream(filePath);
+      https.get(videoUrl, (response) => {
+        if (response.statusCode !== 200) {
+          return reject(new Error(`HTTP xato: ${response.statusCode}`));
+        }
+        response.pipe(file);
+        file.on('finish', () => {
+          file.close(resolve);
+        });
+      }).on('error', (err) => {
+        fs.unlink(filePath, () => {});
+        reject(err);
+      });
     });
 
     console.log('✅ Yuklandi. Yuborilmoqda...');
