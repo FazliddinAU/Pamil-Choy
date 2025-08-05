@@ -14,13 +14,18 @@ async function downloadAndSendVideo(bot, chatId, preferredVideo, options = {}) {
   const filePath = path.join(os.tmpdir(), fileName);
 
   console.log('⬇️ Yuklab olinmoqda:', videoUrl);
+  console.log('📁 Fayl manzili:', filePath);
 
   try {
     const response = await axios({
       method: 'GET',
       url: videoUrl,
       responseType: 'stream',
-      maxRedirects: 5 
+      maxRedirects: 5,
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+      }
     });
 
     const writer = fs.createWriteStream(filePath);
