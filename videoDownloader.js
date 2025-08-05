@@ -1,4 +1,4 @@
-const { exec } = require('child_process');
+const ytdlp = require('yt-dlp-exec');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -9,53 +9,33 @@ async function downloadAndSendVideo(bot, chatId, preferredVideo, options = {}) {
     return bot.sendMessage(chatId, '⚠️ Video URL mavjud emas.');
   }
 
-  const outputPath = path.join(os.tmpdir(), `video_${Date.now()}.%(ext)s`);
+  const fileName = `video_${Date.now()}.mp4`;
+  const filePath = path.join(os.tmpdir(), fileName);
   const videoUrl = preferredVideo.url;
 
   console.log('⬇️ Yuklash boshlanmoqda:', videoUrl);
-  console.log('📁 Saqlash manzili:', outputPath);
+  console.log('📁 Saqlash manzili:', filePath);
 
   try {
-    await new Promise((resolve, reject) => {
-      const command = `yt-dlp -f best -o "${outputPath}" "${videoUrl}"`;
-      exec(command, (error, stdout, stderr) => {
-        console.log('📝 yt-dlp stdout:', stdout);
-        console.error('🛑 yt-dlp stderr:', stderr);
-
-        if (error) {
-          console.error('❌ yt-dlp xatolik:', error.message);
-          return reject(new Error('yt-dlp orqali yuklab bo‘lmadi.'));
-        }
-
-        resolve();
-      });
+    await ytdlp(videoUrl, {
+      output: filePath,
+      format: 'best[ext=mp4]',
+      quiet: true,
     });
 
-    const tmpDir = os.tmpdir();
-    const baseName = path.basename(outputPath).split('.%')[0];
-    const downloadedFile = fs.readdirSync(tmpDir).find(f => f.startsWith(baseName));
-    const filePath = path.join(tmpDir, downloadedFile);
-
     if (!fs.existsSync(filePath)) {
-      throw new Error('❌ Yuklab olingan fayl topilmadi.');
+      throw new Error('❌ Fayl topilmadi');
     }
 
     console.log('📤 Video yuborilmoqda...');
     await bot.sendVideo(chatId, filePath, options);
 
   } catch (err) {
-    console.error('❌ Umumiy xatolik:', err.message);
+    console.error('❌ Xatolik:', err.message);
     await bot.sendMessage(chatId, '❌ Videoni yuklashda yoki yuborishda xatolik yuz berdi.');
   } finally {
-    try {
-      const tmpFiles = fs.readdirSync(os.tmpdir());
-      tmpFiles.forEach(file => {
-        if (file.includes('video_')) {
-          fs.unlinkSync(path.join(os.tmpdir(), file));
-        }
-      });
-    } catch (e) {
-      console.warn('⚠️ Faylni tozalashda xatolik:', e.message);
+    if (fs.existsSync(filePath)) {
+      fs.unlink(filePath, () => {});
     }
   }
 }
