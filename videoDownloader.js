@@ -40,7 +40,7 @@ async function downloadAndSendVideo(bot, chatId, preferredVideo, options = {}) {
     await bot.sendVideo(chatId, filePath, options);
   } catch (err) {
     console.error('❌ Yuklash yoki yuborishda xatolik:', err.message);
-    await bot.sendMessage(chatId, '❌ Videoni yuklashda yoki yuborishda xatolik yuz berdi.');
+    await bot.sendMessage(chatId, 'YouTube platformasidan media yuklash hozircha mumkin emas!');
   } finally {
     if (fs.existsSync(filePath)) {
       fs.unlink(filePath, () => {});
