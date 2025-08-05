@@ -1,7 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const https = require('https');
+const axios = require('axios');
 
 async function downloadAndSendVideo(bot, chatId, preferredVideo, options = {}) {
   if (!preferredVideo || !preferredVideo.url) {
@@ -16,20 +16,19 @@ async function downloadAndSendVideo(bot, chatId, preferredVideo, options = {}) {
   console.log('⬇️ Yuklab olinmoqda:', videoUrl);
 
   try {
+    const response = await axios({
+      method: 'GET',
+      url: videoUrl,
+      responseType: 'stream',
+      maxRedirects: 5 
+    });
+
+    const writer = fs.createWriteStream(filePath);
+
     await new Promise((resolve, reject) => {
-      const file = fs.createWriteStream(filePath);
-      https.get(videoUrl, (response) => {
-        if (response.statusCode !== 200) {
-          return reject(new Error(`HTTP xato: ${response.statusCode}`));
-        }
-        response.pipe(file);
-        file.on('finish', () => {
-          file.close(resolve);
-        });
-      }).on('error', (err) => {
-        fs.unlink(filePath, () => {});
-        reject(err);
-      });
+      response.data.pipe(writer);
+      writer.on('finish', resolve);
+      writer.on('error', reject);
     });
 
     console.log('✅ Yuklandi. Yuborilmoqda...');
