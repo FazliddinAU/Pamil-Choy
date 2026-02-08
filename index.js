@@ -61,7 +61,7 @@ bot.on('message', async (msg) => {
   try {
     const result = await downloadMedia(text);
     if (!result || !result.medias || result.medias.length === 0) {
-      await bot.sendMessage(chatId, ❌ yuklab bo'lmadi.);
+      await bot.sendMessage(chatId, `❌ yuklab bo'lmadi.`);
       return;
     }
     const videoExtensions = [
@@ -86,19 +86,19 @@ console.log(preferredVideo)
 if (preferredVideo) {
     if (isYouTube) {
     await downloadAndSendVideo(bot, chatId, preferredVideo, {
-        caption: <b>📍Reklama va obunalarsiz yuklab oling.✅</b>,
+        caption: `<b>📍Reklama va obunalarsiz yuklab oling.✅</b>`,
         parse_mode : 'HTML',
         ...shareLink
     });
     } else {
     await bot.sendVideo(chatId, preferredVideo.url, {
-        caption : <b>📍Reklama va obunalarsiz yuklab oling.✅</b>,
+        caption : `<b>📍Reklama va obunalarsiz yuklab oling.✅</b>`,
         parse_mode : 'HTML',
         ...shareLink
       });
     }
 } else if (imageMedia && medias.length === 1) {
-  await bot.sendPhoto(chatId, imageMedia.url, {caption : <b>📍Reklama va obunalarsiz yuklab oling.✅</b>, parse_mode : 'HTML', ...shareLink });
+  await bot.sendPhoto(chatId, imageMedia.url, {caption : `<b>📍Reklama va obunalarsiz yuklab oling.✅</b>`, parse_mode : 'HTML', ...shareLink });
 } else {
       const mediaGroup = [];
       const others = [];
@@ -111,7 +111,7 @@ if (preferredVideo) {
           mediaGroup.push({
             type: 'photo',
             media: media.url,
-            ...(mediaGroup.length === 0 && { caption: <b>📍Reklama va obunalarsiz yuklab oling.✅</b>, parse_mode : 'HTML'})
+            ...(mediaGroup.length === 0 && { caption: `<b>📍Reklama va obunalarsiz yuklab oling.✅</b>`, parse_mode : 'HTML'})
           });
         } else if (isVideo) {
           mediaGroup.push({
@@ -134,7 +134,7 @@ if (preferredVideo) {
       }
       for (const fileUrl of others) {
         await bot.sendVideo(chatId, fileUrl,{
-            caption : <b>📍Reklama va obunalarsiz yuklab oling.✅</b>,
+            caption : `<b>📍Reklama va obunalarsiz yuklab oling.✅</b>`,
             parse_mode : 'HTML',
             ...shareLink
         });
@@ -142,7 +142,7 @@ if (preferredVideo) {
     }
   } catch (err) {
     console.error('❌ Yuklashda xatolik:', err.message);
-    await bot.sendMessage(chatId, ❌ Yuklashda xatolik yuz berdi, qayta urinib ko'ring);
+    await bot.sendMessage(chatId, `❌ Yuklashda xatolik yuz berdi, qayta urinib ko'ring`);
   } finally {
     try {
       await bot.deleteMessage(chatId, loadingMsg.message_id);
