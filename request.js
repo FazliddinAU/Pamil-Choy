@@ -3,11 +3,6 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const YTDlpWrap = require('yt-dlp-wrap').default;
-const binaryPath = path.join(__dirname, '..', 'yt-dlp');
-console.log('yt-dlp mavjudmi?', fs.existsSync('/opt/render/project/src/yt-dlp'));
-console.log('Rootdagi fayllar:', fs.readdirSync(__dirname));
-const { HttpsProxyAgent } = require('https-proxy-agent');
 
 async function downloadMedia(url) {
   const options = {
@@ -18,37 +13,13 @@ async function downloadMedia(url) {
       'x-rapidapi-host': 'social-download-all-in-one.p.rapidapi.com',
       'Content-Type': 'application/json'
     },
-    data: { url: url }
+    data: { url }
   };
   try {
     const response = await axios.request(options);
-    const data = response.data;
-    if (!data || !data.medias || data.medias.length === 0) {
-      return data;
-    }
-    const medias = data.medias || [];
-    const preferredItags = [136, 135, 18, 134, 22];
-    let selectedMedia = null;
-    for (const itag of preferredItags) {
-      selectedMedia = medias.find(m => m.itag === itag);
-      if (selectedMedia) break;
-    }
- 
-    if (!selectedMedia) {
-      const videoOnly = medias
-        .filter(m => m.type === 'video' && m.height)
-        .sort((a, b) => (b.height || 0) - (a.height || 0));
-      selectedMedia = videoOnly[0];
-    }
-    if (!selectedMedia) {
-      selectedMedia = medias.find(m => m.is_audio === false && m.type === 'video') || medias[0];
-    }
-    return {
-      ...data,
-      medias: selectedMedia ? [selectedMedia] : []
-    };
+    return response.data;
   } catch (error) {
-    console.error('❌ RapidAPI xatosi:', error.response?.data || error.message);
+    console.error('RapidAPI xatosi:', error.message);
     return null;
   }
 }
@@ -59,28 +30,29 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
     return;
   }
 
+  const videoUrl = media.url;
   const filePath = path.join(os.tmpdir(), `video_${Date.now()}.mp4`);
 
   try {
-    console.log('Yuklab olinmoqda (yt-dlp):', media.url);
-    const proxyUrl = 'http://103.174.102.183:80';  // bepul proxy (tez o'zgaradi, https://free-proxy-list.net dan yangisini oling)
-    const agent = new HttpsProxyAgent(proxyUrl);
-    const ytDlp = new YTDlpWrap(binaryPath);  // ← bu yerda binaryPath
+    console.log('Serverda yuklab olinmoqda:', videoUrl);
 
-    const ytDlpArgs = [
-      media.url,
-      '--proxy', proxyUrl,
-      '-f', 'bestvideo[height<=720]+bestaudio/best',
-      '--merge-output-format', 'mp4',
-      '-o', filePath
-    ];
+    const response = await axios.get(videoUrl, {
+      responseType: 'stream',
+      timeout: 120000, // 2 daqiqa
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/132.0.0.0'
+      }
+    });
 
-    await ytDlp.execPromise(ytDlpArgs);
+    const writer = fs.createWriteStream(filePath);
+    response.data.pipe(writer);
 
-    if (!fs.existsSync(filePath)) {
-      throw new Error('Fayl yuklanmadi');
-    }
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
 
+    // Telegramga local fayl sifatida yuboramiz
     await bot.sendVideo(chatId, filePath, {
       caption: options.caption || `<b>📍Reklama va obunasiz yuklandi ✅</b>`,
       parse_mode: 'HTML',
@@ -89,8 +61,8 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
     });
 
   } catch (err) {
-    console.error('yt-dlp xatosi:', err.message);
-    await bot.sendMessage(chatId, '❌ Video yuklab bo\'lmadi. Qayta urinib ko\'ring.');
+    console.error('Yuklash xatosi:', err.message);
+    await bot.sendMessage(chatId, '❌ Video serverda yuklanmadi. Qayta urinib ko‘ring.');
   } finally {
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
