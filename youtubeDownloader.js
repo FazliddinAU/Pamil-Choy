@@ -1,74 +1,62 @@
-// youtubeDownloader.js (to'liq, xatosiz variant)
-
-const YTDlpWrap = require('yt-dlp-wrap').default;
-const { HttpsProxyAgent } = require('https-proxy-agent');
+const ytdl = require('@distube/ytdl-core');
+const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const fs = require('fs');
-
-const binaryPath = path.join(__dirname, 'node_modules/yt-dlp-wrap/bin/yt-dlp_linux');
-// Agar yuqoridagi build command bilan yuklagan bo'lsangiz: path.join(__dirname, 'yt-dlp')
-
-const ytDlp = new YTDlpWrap(binaryPath);
-
-const proxyList = [
-  'http://103.174.102.183:80',
-  'http://47.251.43.115:33333',
-  // ... qo'shimcha proxy'lar
-];
-
-let currentProxyIndex = 0;
-
-function getNextProxy() {
-  if (proxyList.length === 0) return null;
-  const proxy = proxyList[currentProxyIndex];
-  currentProxyIndex = (currentProxyIndex + 1) % proxyList.length;
-  console.log(`Proxy: ${proxy}`);
-  return proxy;
-}
 
 async function getYouTubeMedia(url) {
+  if (!ytdl.validateURL(url)) return { error: "Noto'g'ri URL" };
+
   try {
-    const proxy = getNextProxy();
-    const options = proxy ? { proxy } : {};
+    const info = await ytdl.getInfo(url, {
+      requestOptions: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      }
+    });
 
-    const info = await ytDlp.getVideoInfo(url, options);
+    let format = ytdl.chooseFormat(info.formats, {
+      filter: 'audioandvideo',
+      quality: 'highestvideo'
+    });
 
-    const format = info.formats
-      .filter(f => f.vcodec !== 'none' && f.acodec !== 'none')
-      .sort((a, b) => (b.filesize || 0) - (a.filesize || 0))[0] || info.formats[0];
+    if (!format) {
+      format = ytdl.chooseFormat(info.formats, { quality: 'highest' });
+    }
+
+    if (!format) return { error: "Format topilmadi" };
 
     return {
-      medias: [{ url: format.url, quality: format.format_note || 'best' }],
-      title: info.title,
-      thumbnail: info.thumbnail
+      medias: [{
+        url: format.url,
+        quality: format.qualityLabel || '720p'
+      }],
+      title: info.videoDetails.title,
+      thumbnail: info.videoDetails.thumbnails[0]?.url || ''
     };
   } catch (err) {
-    console.error('yt-dlp xatosi:', err);
-    return { error: err.message };
+    console.error('ytdl xatosi:', err.message);
+    return { error: "Yuklab bo'lmadi (video cheklangan yoki xato)" };
   }
 }
 
-// downloadYouTubeVideo funksiyasini ham shu tarzda yangilang (args ga --proxy qo'shing)
 async function downloadYouTubeVideo(url) {
-  const fileName = `yt_${Date.now()}.mp4`;
-  const filePath = path.join(os.tmpdir(), fileName);
+  const filePath = path.join(os.tmpdir(), `yt_${Date.now()}.mp4`);
 
   try {
-    const proxy = getNextProxy();
-    const args = [
-      url,
-      '-f', 'bestvideo+bestaudio/best',
-      '--merge-output-format', 'mp4',
-      '-o', filePath
-    ];
+    const info = await ytdl.getInfo(url);
+    const format = ytdl.chooseFormat(info.formats, { filter: 'audioandvideo', quality: 'highest' });
 
-    if (proxy) args.unshift('--proxy', proxy);
+    const stream = ytdl.downloadFromInfo(info, { format });
+    stream.pipe(fs.createWriteStream(filePath));
 
-    await ytDlp.execPromise(args);
+    await new Promise((resolve, reject) => {
+      stream.on('end', resolve);
+      stream.on('error', reject);
+    });
+
     return filePath;
-  } catch (err) {
-    console.error(err);
+  } catch {
     return null;
   }
 }
