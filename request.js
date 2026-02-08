@@ -25,46 +25,61 @@ async function downloadMedia(url) {
 }
 
 async function downloadAndSendVideo(bot, chatId, media, options = {}) {
-  if (!media?.url) {
-    await bot.sendMessage(chatId, '❌ Video URL topilmadi.');
+  const originalUrl = media.url || media; 
+
+  if (!originalUrl || !originalUrl.includes('youtube.com') && !originalUrl.includes('youtu.be')) {
+    await bot.sendMessage(chatId, '❌ Bu YouTube havolasi emas.');
     return;
   }
 
-  const videoUrl = media.url;
-  const filePath = path.join(os.tmpdir(), `video_${Date.now()}.mp4`);
-
   try {
-    console.log('Serverda yuklab olinmoqda:', videoUrl);
+    let videoId;
+    if (originalUrl.includes('/shorts/')) {
+      videoId = originalUrl.split('/shorts/')[1]?.split('?')[0];
+    } else if (originalUrl.includes('youtu.be/')) {
+      videoId = originalUrl.split('youtu.be/')[1]?.split('?')[0];
+    } else if (originalUrl.includes('v=')) {
+      videoId = new URL(originalUrl).searchParams.get('v');
+    }
 
-    const response = await axios.get(videoUrl, {
-      responseType: 'stream',
-      timeout: 120000, // 2 daqiqa
+    if (!videoId) {
+      await bot.sendMessage(chatId, '❌ Video ID topilmadi.');
+      return;
+    }
+
+    console.log('Yuklab olinmoqda (yangi API):', videoId);
+
+    const apiOptions = {
+      method: 'GET',
+      url: `https://youtube-video-fast-downloader-24-7.p.rapidapi.com/download_short/${videoId}`,
+      params: { quality: '247' }, 
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/132.0.0.0'
+        'x-rapidapi-key': process.env.RAPID_API_KEY,
+        'x-rapidapi-host': 'youtube-video-fast-downloader-24-7.p.rapidapi.com'
       }
-    });
+    };
 
-    const writer = fs.createWriteStream(filePath);
-    response.data.pipe(writer);
+    const response = await axios.request(apiOptions);
+    const data = response.data;
 
-    await new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
+    console.log('API javobi:', data);
 
-    // Telegramga local fayl sifatida yuboramiz
-    await bot.sendVideo(chatId, filePath, {
-      caption: options.caption || `<b>📍Reklama va obunasiz yuklandi ✅</b>`,
-      parse_mode: 'HTML',
-      ...options.reply_markup && { reply_markup: options.reply_markup },
-      supports_streaming: true
-    });
+    if (data?.file) {
+      await bot.sendVideo(chatId, data.file, {
+        caption: options.caption || `<b>📍Reklama va obunasiz yuklandi ✅</b>`,
+        parse_mode: 'HTML',
+        ...options.reply_markup && { reply_markup: options.reply_markup },
+        supports_streaming: true
+      });
+    } else if (data?.comment?.includes('soon be ready')) {
+      await bot.sendMessage(chatId, 'Video tayyorlanmoqda... 30–120 soniya kutib, qayta urinib ko‘ring.');
+    } else {
+      await bot.sendMessage(chatId, '❌ Yuklashda xatolik yuz berdi. Qayta urinib ko‘ring.');
+    }
 
   } catch (err) {
     console.error('Yuklash xatosi:', err.message);
-    await bot.sendMessage(chatId, '❌ Video serverda yuklanmadi. Qayta urinib ko‘ring.');
-  } finally {
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    await bot.sendMessage(chatId, '❌ Video yuklab bo\'lmadi. Qayta urinib ko‘ring.');
   }
 }
 
