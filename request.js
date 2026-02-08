@@ -60,15 +60,19 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
   try {
     console.log('Yuklab olinmoqda:', videoUrl);
 
-    const response = await axios({
-      method: 'GET',
-      url: videoUrl,
-      responseType: 'stream',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
-      timeout: 90000  // 90 soniya (katta videolar uchun)
-    });
+const response = await axios({
+  method: 'GET',
+  url: videoUrl,
+  responseType: 'stream',
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
+    'Referer': 'https://www.youtube.com/',
+    'Accept': '*/*',
+    'Accept-Language': 'en-US,en;q=0.9,uz;q=0.8',
+    'Origin': 'https://www.youtube.com'
+  },
+  timeout: 90000
+});
 
     const writer = fs.createWriteStream(filePath);
     response.data.pipe(writer);
