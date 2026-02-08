@@ -67,20 +67,11 @@ bot.on('message', async (msg) => {
     let medias = [];
 
     if (isYouTube) {
-  const apiData = await downloadMedia(text);
-  
-    if (!apiData || !apiData.medias?.length) {
-      await bot.sendMessage(chatId, `❌ Yuklab bo'lmadi (ma'lumot topilmadi).`);
-      return;
-    }
-  
-    const selectedMedia = apiData.medias[0];
-  
-    await downloadAndSendVideo(bot, chatId, selectedMedia, {
-      caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>\n${apiData.title ? `<b>${apiData.title}</b>` : ''}`,
-      parse_mode: 'HTML',
-      ...shareLink
-    });
+    await downloadAndSendVideo(bot, chatId, text, { 
+    caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>`,
+    parse_mode: 'HTML',
+    ...shareLink
+  });
     } else {
       // Boshqa platformalar uchun
       result = await downloadMedia(text);
