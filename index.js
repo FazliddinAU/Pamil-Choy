@@ -64,11 +64,30 @@ bot.on('message', async (msg) => {
     let result;
 
     if (isYouTube) {
-      result = await downloadAndSendVideo(text);  
+      const apiData = await downloadMedia(text);
+
+      if (!apiData || !apiData.medias?.length) {
+        await bot.sendMessage(chatId, `❌ Yuklab bo'lmadi (YouTube ma'lumotlari topilmadi).`);
+        return;
+      }
+
+      const selectedMedia = apiData.medias[0];
+
+      await downloadAndSendVideo(bot, chatId, selectedMedia, {
+        caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>\n${apiData.title ? `<b>${apiData.title}</b>` : ''}`,
+        parse_mode: 'HTML',
+        ...shareLink
+      });
+
+      result = apiData;
     } else {
       result = await downloadMedia(text);        
     }
-
+    if (!isYouTube) {
+      if (!result || !result.medias?.length) {
+        await bot.sendMessage(chatId, `❌ Yuklab bo'lmadi.`);
+        return;
+      }
     if (!result || !result.medias?.length) {
       await bot.sendMessage(chatId, `❌ Yuklab bo'lmadi.`);
       return;
