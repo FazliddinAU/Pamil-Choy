@@ -55,15 +55,19 @@ bot.on('message', async (msg) => {
   const text = msg.text?.trim();
 
   if (!text || text.startsWith('/') || !text.includes('http')) return;
+
   const isYouTube = text.includes('youtube.com') || text.includes('youtu.be');
+
   const loadingMsg = await bot.sendMessage(chatId, `<b>⏳ Yuklanmoqda, ungacha choy ichib turing...🫖</b>`, {
     parse_mode: 'HTML'
   });
 
   try {
     let result;
+    let medias = [];
 
     if (isYouTube) {
+      // YouTube uchun avval ma'lumot olamiz
       const apiData = await downloadMedia(text);
 
       if (!apiData || !apiData.medias?.length) {
@@ -73,6 +77,7 @@ bot.on('message', async (msg) => {
 
       const selectedMedia = apiData.medias[0];
 
+      // Serverda yuklab yuboramiz
       await downloadAndSendVideo(bot, chatId, selectedMedia, {
         caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>\n${apiData.title ? `<b>${apiData.title}</b>` : ''}`,
         parse_mode: 'HTML',
@@ -81,94 +86,94 @@ bot.on('message', async (msg) => {
 
       result = apiData;
     } else {
-      result = await downloadMedia(text);        
-    }
-    if (!isYouTube) {
+      // Boshqa platformalar uchun
+      result = await downloadMedia(text);
+
       if (!result || !result.medias?.length) {
         await bot.sendMessage(chatId, `❌ Yuklab bo'lmadi.`);
         return;
       }
-    if (!result || !result.medias?.length) {
-      await bot.sendMessage(chatId, `❌ Yuklab bo'lmadi.`);
-      return;
     }
 
-    const medias = result.medias.filter(m => m?.url);
-    console.log('Medias soni:', medias.length);
+    // Faqat non-YouTube uchun qolgan logika
+    if (!isYouTube) {
+      medias = result.medias.filter(m => m?.url);
+      console.log('Medias soni:', medias.length);
 
-    const videoExtensions = ['.mp4', '.mov', '.avi', '.wmv', '.flv', '.webm', '.mkv', '.3gp', '.mpeg', '.mpg', '.m4v', '.ts', '.ogv'];
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+      const videoExtensions = ['.mp4', '.mov', '.avi', '.wmv', '.flv', '.webm', '.mkv', '.3gp', '.mpeg', '.mpg', '.m4v', '.ts', '.ogv'];
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
 
-    const videoMedias = medias.filter(m => {
-      const url = m.url.toLowerCase();
-      return videoExtensions.some(ext => url.endsWith(ext)) || url.includes('mime=video');
-    });
-
-    const imageMedia = medias.find(m => {
-      const url = m.url.toLowerCase();
-      return imageExtensions.some(ext => url.endsWith(ext)) || url.includes('mime=image');
-    });
-
-    const preferredVideo = videoMedias[0];
-
-    if (preferredVideo) {
-      await bot.sendVideo(chatId, preferredVideo.url, {
-        caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>\n${result.title ? `<b>${result.title}</b>` : ''}`,
-        parse_mode: 'HTML',
-        ...shareLink,
-        supports_streaming: true  
+      const videoMedias = medias.filter(m => {
+        const url = m.url.toLowerCase();
+        return videoExtensions.some(ext => url.endsWith(ext)) || url.includes('mime=video');
       });
-    } else if (imageMedia && medias.length === 1) {
-      await bot.sendPhoto(chatId, imageMedia.url, {
-        caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>`,
-        parse_mode: 'HTML',
-        ...shareLink
+
+      const imageMedia = medias.find(m => {
+        const url = m.url.toLowerCase();
+        return imageExtensions.some(ext => url.endsWith(ext)) || url.includes('mime=image');
       });
-    } else {
-      const mediaGroup = [];
-      const others = [];
 
-      for (const media of medias) {
-        const url = media.url.toLowerCase();
-        const isVideo = videoExtensions.some(ext => url.endsWith(ext)) || url.includes('mime=video');
-        const isImage = imageExtensions.some(ext => url.endsWith(ext)) || url.includes('mime=image');
+      const preferredVideo = videoMedias[0];
 
-        if (isImage) {
-          mediaGroup.push({
-            type: 'photo',
-            media: media.url,
-            ...(mediaGroup.length === 0 && {
-              caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>`,
-              parse_mode: 'HTML'
-            })
-          });
-        } else if (isVideo) {
-          mediaGroup.push({
-            type: 'video',
-            media: media.url
-          });
-        } else {
-          others.push(media.url);
-        }
-      }
-
-      const chunkSize = 10;
-      for (let i = 0; i < mediaGroup.length; i += chunkSize) {
-        const chunk = mediaGroup.slice(i, i + chunkSize);
-        try {
-          await bot.sendMediaGroup(chatId, chunk);
-        } catch (e) {
-          console.error('sendMediaGroup xatosi:', e.message);
-          await bot.sendMessage(chatId, '⚠️ Medialarni yuborishda xatolik.');
-        }
-      }
-
-      for (const url of others) {
-        await bot.sendVideo(chatId, url, {
+      if (preferredVideo) {
+        await bot.sendVideo(chatId, preferredVideo.url, {
+          caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>\n${result.title ? `<b>${result.title}</b>` : ''}`,
+          parse_mode: 'HTML',
+          ...shareLink,
+          supports_streaming: true
+        });
+      } else if (imageMedia && medias.length === 1) {
+        await bot.sendPhoto(chatId, imageMedia.url, {
           caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>`,
           parse_mode: 'HTML',
           ...shareLink
         });
+      } else {
+        const mediaGroup = [];
+        const others = [];
+
+        for (const media of medias) {
+          const url = media.url.toLowerCase();
+          const isVideo = videoExtensions.some(ext => url.endsWith(ext)) || url.includes('mime=video');
+          const isImage = imageExtensions.some(ext => url.endsWith(ext)) || url.includes('mime=image');
+
+          if (isImage) {
+            mediaGroup.push({
+              type: 'photo',
+              media: media.url,
+              ...(mediaGroup.length === 0 && {
+                caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>`,
+                parse_mode: 'HTML'
+              })
+            });
+          } else if (isVideo) {
+            mediaGroup.push({
+              type: 'video',
+              media: media.url
+            });
+          } else {
+            others.push(media.url);
+          }
+        }
+
+        const chunkSize = 10;
+        for (let i = 0; i < mediaGroup.length; i += chunkSize) {
+          const chunk = mediaGroup.slice(i, i + chunkSize);
+          try {
+            await bot.sendMediaGroup(chatId, chunk);
+          } catch (e) {
+            console.error('sendMediaGroup xatosi:', e.message);
+            await bot.sendMessage(chatId, '⚠️ Medialarni yuborishda xatolik.');
+          }
+        }
+
+        for (const url of others) {
+          await bot.sendVideo(chatId, url, {
+            caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>`,
+            parse_mode: 'HTML',
+            ...shareLink
+          });
+        }
       }
     }
   } catch (err) {
