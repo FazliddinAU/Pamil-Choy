@@ -55,7 +55,7 @@ bot.on('message', async (msg) => {
   const text = msg.text;
   if (!text || text.startsWith('/') || !text.includes('http')) return;
   const isYouTube = text.includes('youtube.com') || text.includes('youtu.be');
-  const loadingMsg = await bot.sendMessage(chatId, <b>⏳ Yuklanmoqda, ungacha choy ichib turing...🫖</b>, {
+  const loadingMsg = await bot.sendMessage(chatId, `<b>⏳ Yuklanmoqda, ungacha choy ichib turing...🫖</b>`, {
     parse_mode : 'HTML'
   });
   try {
