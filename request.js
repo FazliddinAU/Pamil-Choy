@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const YTDlpWrap = require('yt-dlp-wrap').default;
-const binaryPath = path.join(__dirname, '..', 'yt-dlp');
+const binaryPath = path.join(__dirname, 'yt-dlp');
 
 async function downloadMedia(url) {
   const options = {
@@ -61,11 +61,11 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
   try {
     console.log('Yuklab olinmoqda (yt-dlp):', media.url);
 
-    const ytDlp = new YTDlpWrap(binaryPath);  // majburiy binary yo'li
+    const ytDlp = new YTDlpWrap(binaryPath);  // ← majburiy yo'l berildi
 
     const ytDlpArgs = [
       media.url,
-      '-f', 'bestvideo[height<=720]+bestaudio/best',
+      '-f', 'bestvideo[height<=720]+bestaudio/best',  // 720p gacha
       '--merge-output-format', 'mp4',
       '-o', filePath
     ];
@@ -75,6 +75,8 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
     if (!fs.existsSync(filePath)) {
       throw new Error('Fayl yuklanmadi');
     }
+
+    console.log('Yuklandi, Telegramga yuborilmoqda...');
 
     await bot.sendVideo(chatId, filePath, {
       caption: options.caption || `<b>📍Reklama va obunasiz yuklandi ✅</b>`,
