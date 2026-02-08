@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
-const downloadMedia = require('./request');
+const { downloadMedia, downloadYouTubeMedia } = require('./request');
 
 const app = express();
 app.use(express.json());
@@ -55,13 +55,19 @@ bot.on('message', async (msg) => {
   const text = msg.text?.trim();
 
   if (!text || text.startsWith('/') || !text.includes('http')) return;
-
+  const isYouTube = text.includes('youtube.com') || text.includes('youtu.be');
   const loadingMsg = await bot.sendMessage(chatId, `<b>⏳ Yuklanmoqda, ungacha choy ichib turing...🫖</b>`, {
     parse_mode: 'HTML'
   });
 
   try {
-    const result = await downloadMedia(text);
+    let result;
+
+    if (isYouTube) {
+      result = await downloadYouTubeMedia(text);  
+    } else {
+      result = await downloadMedia(text);        
+    }
 
     if (!result || !result.medias?.length) {
       await bot.sendMessage(chatId, `❌ Yuklab bo'lmadi.`);
