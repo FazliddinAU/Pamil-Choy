@@ -7,6 +7,8 @@ const YTDlpWrap = require('yt-dlp-wrap').default;
 const binaryPath = path.join(__dirname, '..', 'yt-dlp');
 console.log('yt-dlp mavjudmi?', fs.existsSync('/opt/render/project/src/yt-dlp'));
 console.log('Rootdagi fayllar:', fs.readdirSync(__dirname));
+const { HttpsProxyAgent } = require('https-proxy-agent');
+
 async function downloadMedia(url) {
   const options = {
     method: 'POST',
@@ -61,11 +63,13 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
 
   try {
     console.log('Yuklab olinmoqda (yt-dlp):', media.url);
-
+    const proxyUrl = 'http://103.174.102.183:80';  // bepul proxy (tez o'zgaradi, https://free-proxy-list.net dan yangisini oling)
+    const agent = new HttpsProxyAgent(proxyUrl);
     const ytDlp = new YTDlpWrap(binaryPath);  // ← bu yerda binaryPath
 
     const ytDlpArgs = [
       media.url,
+      '--proxy', proxyUrl,
       '-f', 'bestvideo[height<=720]+bestaudio/best',
       '--merge-output-format', 'mp4',
       '-o', filePath
