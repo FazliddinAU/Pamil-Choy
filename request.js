@@ -3,6 +3,8 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const YTDlpWrap = require('yt-dlp-wrap').default;
+
 
 async function downloadMedia(url) {
   const options = {
@@ -54,33 +56,31 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
     return;
   }
 
-  const videoUrl = media.url;
+  // Agar media.url YouTube googlevideo bo'lsa – yt-dlp bilan yuklaymiz
+  const isYouTubeUrl = media.url.includes('googlevideo.com') || media.url.includes('youtube.com');
+
   const filePath = path.join(os.tmpdir(), `video_${Date.now()}.mp4`);
 
   try {
-    console.log('Yuklab olinmoqda:', videoUrl);
+    console.log('Yuklab olinmoqda (yt-dlp):', media.url);
 
-const response = await axios({
-  method: 'GET',
-  url: videoUrl,
-  responseType: 'stream',
-  headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
-    'Referer': 'https://www.youtube.com/',
-    'Accept': '*/*',
-    'Accept-Language': 'en-US,en;q=0.9,uz;q=0.8',
-    'Origin': 'https://www.youtube.com'
-  },
-  timeout: 90000
-});
+    const ytDlp = new YTDlpWrap();  // binary avto yuklanadi
 
-    const writer = fs.createWriteStream(filePath);
-    response.data.pipe(writer);
+    // yt-dlp argumentlari
+    const ytDlpArgs = [
+      media.url,                    // original URL
+      '-f', 'bestvideo[height<=720]+bestaudio/best',  // 720p gacha + eng yaxshi audio
+      '--merge-output-format', 'mp4',
+      '-o', filePath
+    ];
 
-    await new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
+    // yt-dlp ni ishga tushiramiz
+    await ytDlp.execPromise(ytDlpArgs);
+
+    // Fayl mavjudligini tekshiramiz
+    if (!fs.existsSync(filePath)) {
+      throw new Error('Fayl yuklanmadi');
+    }
 
     console.log('Yuklandi, Telegramga yuborilmoqda...');
 
@@ -92,11 +92,11 @@ const response = await axios({
     });
 
   } catch (err) {
-    console.error('Yuklash xatosi:', err.message);
-    await bot.sendMessage(chatId, '❌ Video yuklab bo\'lmadi (Telegram cheklovi yoki server muammosi). Qayta urinib ko\'ring.');
+    console.error('yt-dlp yuklash xatosi:', err.message);
+    await bot.sendMessage(chatId, '❌ Video yuklab bo\'lmadi. Qayta urinib ko\'ring yoki boshqa havola yuboring.');
   } finally {
     if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath); // vaqtinchalik faylni o'chirish
+      fs.unlinkSync(filePath);
     }
   }
 }
