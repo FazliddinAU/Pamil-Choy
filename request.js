@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const YTDlpWrap = require('yt-dlp-wrap').default;
-
+const binaryPath = path.join(__dirname, '..', 'yt-dlp');
 
 async function downloadMedia(url) {
   const options = {
@@ -56,33 +56,25 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
     return;
   }
 
-  // Agar media.url YouTube googlevideo bo'lsa – yt-dlp bilan yuklaymiz
-  const isYouTubeUrl = media.url.includes('googlevideo.com') || media.url.includes('youtube.com');
-
   const filePath = path.join(os.tmpdir(), `video_${Date.now()}.mp4`);
 
   try {
     console.log('Yuklab olinmoqda (yt-dlp):', media.url);
 
-    const ytDlp = new YTDlpWrap();  // binary avto yuklanadi
+    const ytDlp = new YTDlpWrap(binaryPath);  // majburiy binary yo'li
 
-    // yt-dlp argumentlari
     const ytDlpArgs = [
-      media.url,                    // original URL
-      '-f', 'bestvideo[height<=720]+bestaudio/best',  // 720p gacha + eng yaxshi audio
+      media.url,
+      '-f', 'bestvideo[height<=720]+bestaudio/best',
       '--merge-output-format', 'mp4',
       '-o', filePath
     ];
 
-    // yt-dlp ni ishga tushiramiz
     await ytDlp.execPromise(ytDlpArgs);
 
-    // Fayl mavjudligini tekshiramiz
     if (!fs.existsSync(filePath)) {
       throw new Error('Fayl yuklanmadi');
     }
-
-    console.log('Yuklandi, Telegramga yuborilmoqda...');
 
     await bot.sendVideo(chatId, filePath, {
       caption: options.caption || `<b>📍Reklama va obunasiz yuklandi ✅</b>`,
@@ -92,12 +84,10 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
     });
 
   } catch (err) {
-    console.error('yt-dlp yuklash xatosi:', err.message);
-    await bot.sendMessage(chatId, '❌ Video yuklab bo\'lmadi. Qayta urinib ko\'ring yoki boshqa havola yuboring.');
+    console.error('yt-dlp xatosi:', err.message);
+    await bot.sendMessage(chatId, '❌ Video yuklab bo\'lmadi. Qayta urinib ko\'ring.');
   } finally {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
 }
 
