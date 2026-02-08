@@ -1,71 +1,45 @@
-// youtubeDownloader.js (yangi fayl)
-const ytdl = require('ytdl-core');
-const fs = require('fs');
+const YTDlpWrap = require('yt-dlp-wrap');
 const path = require('path');
 const os = require('os');
+const fs = require('fs');
+
+const ytDlp = new YTDlpWrap();  // binary avto yuklanadi
 
 async function getYouTubeMedia(url) {
   try {
-    if (!ytdl.validateURL(url)) {
-      return { error: "Noto'g'ri YouTube URL" };
-    }
-
-    const info = await ytdl.getInfo(url);
-    const videoDetails = info.videoDetails;
-
-    // Eng yaxshi video format (720p yoki yuqori, audio bilan muxed)
-    let format = ytdl.chooseFormat(info.formats, {
-      quality: 'highestvideo',   // eng yuqori sifatli video
-      filter: 'audioandvideo',   // audio + video birga bo'lishi kerak
-    });
-
-    if (!format) {
-      // Agar muxed topilmasa, eng yaxshi videoni olamiz (keyin audio alohida)
-      format = ytdl.chooseFormat(info.formats, { quality: 'highestvideo' });
-    }
-
-    if (!format) {
-      return { error: "Mos format topilmadi" };
-    }
-
-    const medias = [{
-      url: format.url,
-      quality: format.qualityLabel || '720p',
-      mimeType: format.mimeType,
-      isDirect: true,  // to'g'ridan yuborish mumkin
-      title: videoDetails.title,
-      thumbnail: videoDetails.thumbnails?.[0]?.url || '',
-    }];
+    const info = await ytDlp.getVideoInfo(url);
+    
+    // Eng yaxshi video + audio birga (bestvideo+bestaudio)
+    const format = info.formats
+      .filter(f => f.vcodec !== 'none' && f.acodec !== 'none')
+      .sort((a, b) => (b.filesize || 0) - (a.filesize || 0))[0] || info.formats[0];
 
     return {
-      medias,
-      title: videoDetails.title,
-      thumbnail: videoDetails.thumbnails?.[0]?.url,
+      medias: [{
+        url: format.url,
+        quality: format.format_note || format.quality || 'best',
+        mimeType: format.mimeType || 'video/mp4'
+      }],
+      title: info.title,
+      thumbnail: info.thumbnail
     };
-
   } catch (err) {
-    console.error('YouTube xatosi:', err.message);
-    return { error: err.message.includes('Sign in') ? "YouTube cheklovi (kirish talab qilinishi mumkin)" : "Yuklab bo'lmadi" };
+    console.error('yt-dlp xatosi:', err.message);
+    return { error: err.message || 'Yuklab bo\'lmadi' };
   }
 }
 
-// Agar serverda fayl yuklab yuborish kerak bo'lsa (Telegram cheklovi uchun)
-async function downloadYouTubeVideo(url, chatId) {
+async function downloadYouTubeVideo(url) {
   const fileName = `yt_${Date.now()}.mp4`;
   const filePath = path.join(os.tmpdir(), fileName);
 
   try {
-    const info = await ytdl.getInfo(url);
-    const format = ytdl.chooseFormat(info.formats, { quality: 'highestvideo', filter: 'audioandvideo' });
-
-    const stream = ytdl.downloadFromInfo(info, { format });
-
-    await new Promise((resolve, reject) => {
-      stream.pipe(fs.createWriteStream(filePath))
-        .on('finish', resolve)
-        .on('error', reject);
-    });
-
+    await ytDlp.execPromise([
+      url,
+      '-f', 'bestvideo+bestaudio/best',
+      '--merge-output-format', 'mp4',
+      '-o', filePath
+    ]);
     return filePath;
   } catch (err) {
     console.error(err);
