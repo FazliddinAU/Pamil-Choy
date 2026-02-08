@@ -4,17 +4,14 @@ const path = require('path');
 const os = require('os');
 
 async function getYouTubeMedia(url) {
-  if (!ytdl.validateURL(url)) return { error: "Noto'g'ri URL" };
+  if (!ytdl.validateURL(url)) {
+    return { error: 'Noto\'g\'ri YouTube URL' };
+  }
 
   try {
-    const info = await ytdl.getInfo(url, {
-      requestOptions: {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      }
-    });
+    const info = await ytdl.getInfo(url);
 
+    // Eng yaxshi video + audio birga (ko'pincha 720p yoki yuqori)
     let format = ytdl.chooseFormat(info.formats, {
       filter: 'audioandvideo',
       quality: 'highestvideo'
@@ -24,28 +21,36 @@ async function getYouTubeMedia(url) {
       format = ytdl.chooseFormat(info.formats, { quality: 'highest' });
     }
 
-    if (!format) return { error: "Format topilmadi" };
+    if (!format) {
+      return { error: 'Mos format topilmadi' };
+    }
 
     return {
       medias: [{
         url: format.url,
-        quality: format.qualityLabel || '720p'
+        quality: format.qualityLabel || format.quality || 'best'
       }],
       title: info.videoDetails.title,
-      thumbnail: info.videoDetails.thumbnails[0]?.url || ''
+      thumbnail: info.videoDetails.thumbnails?.[0]?.url || ''
     };
   } catch (err) {
     console.error('ytdl xatosi:', err.message);
-    return { error: "Yuklab bo'lmadi (video cheklangan yoki xato)" };
+    return { error: 'Yuklab bo\'lmadi (video cheklangan bo\'lishi mumkin)' };
   }
 }
 
 async function downloadYouTubeVideo(url) {
-  const filePath = path.join(os.tmpdir(), `yt_${Date.now()}.mp4`);
+  const fileName = `yt_${Date.now()}.mp4`;
+  const filePath = path.join(os.tmpdir(), fileName);
 
   try {
     const info = await ytdl.getInfo(url);
-    const format = ytdl.chooseFormat(info.formats, { filter: 'audioandvideo', quality: 'highest' });
+    const format = ytdl.chooseFormat(info.formats, {
+      filter: 'audioandvideo',
+      quality: 'highest'
+    });
+
+    if (!format) throw new Error('Format topilmadi');
 
     const stream = ytdl.downloadFromInfo(info, { format });
     stream.pipe(fs.createWriteStream(filePath));
@@ -56,7 +61,9 @@ async function downloadYouTubeVideo(url) {
     });
 
     return filePath;
-  } catch {
+  } catch (err) {
+    console.error(err);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     return null;
   }
 }
