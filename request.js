@@ -86,34 +86,35 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
 
 async function downloadAndSendLongVideo(bot, chatId, originalUrl, options = {}) {
   try {
-    let videoId;
-    if (originalUrl.includes('/shorts/')) {
-      videoId = originalUrl.split('/shorts/')[1]?.split('?')[0];
-    } else if (originalUrl.includes('youtu.be/')) {
-      videoId = originalUrl.split('youtu.be/')[1]?.split('?')[0];
-    } else if (originalUrl.includes('v=')) {
-      videoId = new URL(originalUrl).searchParams.get('v');
-    }
-
-    if (!videoId) {
-      await bot.sendMessage(chatId, '❌ Video ID topilmadi.');
-      return;
-    }
 
     console.log('Katta video yuklanmoqda (yangi API):', videoId);
 
     const apiOptions = {
       method: 'GET',
-      url: `https://youtube-video-fast-downloader-24-7.p.rapidapi.com/download_video/${videoId}`,  
-      params: { quality: '247' },  
+      url: `https://youtube-video-fast-downloader-24-7.p.rapidapi.com/download_video/${videoId}`,
+      params: { quality: '247' },
       headers: {
         'x-rapidapi-key': process.env.RAPID_API_KEY,
         'x-rapidapi-host': 'youtube-video-fast-downloader-24-7.p.rapidapi.com'
       }
     };
 
-    const response = await axios.request(apiOptions);
-    const data = response.data;
+    let response = await axios.request(apiOptions);
+    let data = response.data;
+
+    if (data?.comment?.includes('soon be ready')) {
+      await bot.sendMessage(chatId, `Video tayyorlanmoqda... 30–90 soniya kutib turing. Qayta urinib ko'ryapman... ⏳`);
+
+      await new Promise(resolve => setTimeout(resolve, 45000)); 
+
+      response = await axios.request(apiOptions);
+      data = response.data;
+
+      if (data?.comment?.includes('soon be ready')) {
+        await bot.sendMessage(chatId, 'Video hali tayyor emas. 1–2 daqiqadan keyin qayta urinib ko‘ring.');
+        return;
+      }
+    }
 
     console.log('API javobi (uzun video):', data);
 
@@ -124,10 +125,8 @@ async function downloadAndSendLongVideo(bot, chatId, originalUrl, options = {}) 
         ...options.reply_markup && { reply_markup: options.reply_markup },
         supports_streaming: true
       });
-    } else if (data?.comment?.includes('soon be ready')) {
-      await bot.sendMessage(chatId, 'Video tayyorlanmoqda... 30–300 soniya kutib, qayta urinib ko‘ring.');
     } else {
-      await bot.sendMessage(chatId, '❌ Yuklashda xatolik yuz berdi yoki video topilmadi.');
+      await bot.sendMessage(chatId, '❌ Yuklashda xatolik yuz berdi yoki video tayyor emas.');
     }
 
   } catch (err) {
