@@ -86,6 +86,20 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
 
 async function downloadAndSendLongVideo(bot, chatId, originalUrl, options = {}) {
   try {
+    // Video ID ni chiqaramiz (bu qatorlar oldin yo'q edi — shu sababli xato chiqqan)
+    let videoId;
+    if (originalUrl.includes('/shorts/')) {
+      videoId = originalUrl.split('/shorts/')[1]?.split('?')[0];
+    } else if (originalUrl.includes('youtu.be/')) {
+      videoId = originalUrl.split('youtu.be/')[1]?.split('?')[0];
+    } else if (originalUrl.includes('v=')) {
+      videoId = new URL(originalUrl).searchParams.get('v');
+    }
+
+    if (!videoId) {
+      await bot.sendMessage(chatId, '❌ Video ID topilmadi.');
+      return;
+    }
 
     console.log('Katta video yuklanmoqda (yangi API):', videoId);
 
@@ -102,16 +116,17 @@ async function downloadAndSendLongVideo(bot, chatId, originalUrl, options = {}) 
     let response = await axios.request(apiOptions);
     let data = response.data;
 
+    // Agar "soon be ready" bo'lsa — kutamiz va qayta urinamiz
     if (data?.comment?.includes('soon be ready')) {
       await bot.sendMessage(chatId, `Video tayyorlanmoqda... 30–90 soniya kutib turing. Qayta urinib ko'ryapman... ⏳`);
 
-      await new Promise(resolve => setTimeout(resolve, 45000)); 
+      await new Promise(resolve => setTimeout(resolve, 60000)); // 60 soniya kutish (yaxshiroq natija uchun)
 
       response = await axios.request(apiOptions);
       data = response.data;
 
       if (data?.comment?.includes('soon be ready')) {
-        await bot.sendMessage(chatId, 'Video hali tayyor emas. 1–2 daqiqadan keyin qayta urinib ko‘ring.');
+        await bot.sendMessage(chatId, 'Video hali tayyor emas. 2–3 daqiqadan keyin qayta urinib ko‘ring.');
         return;
       }
     }
@@ -134,4 +149,5 @@ async function downloadAndSendLongVideo(bot, chatId, originalUrl, options = {}) 
     await bot.sendMessage(chatId, '❌ Katta video yuklab bo\'lmadi. Qayta urinib ko‘ring yoki boshqa havola yuboring.');
   }
 }
+
 module.exports = { downloadMedia, downloadAndSendVideo, downloadAndSendLongVideo };
