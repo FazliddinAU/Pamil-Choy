@@ -83,4 +83,56 @@ async function downloadAndSendVideo(bot, chatId, media, options = {}) {
   }
 }
 
-module.exports = { downloadMedia, downloadAndSendVideo };
+
+async function downloadAndSendLongVideo(bot, chatId, originalUrl, options = {}) {
+  try {
+    let videoId;
+    if (originalUrl.includes('/shorts/')) {
+      videoId = originalUrl.split('/shorts/')[1]?.split('?')[0];
+    } else if (originalUrl.includes('youtu.be/')) {
+      videoId = originalUrl.split('youtu.be/')[1]?.split('?')[0];
+    } else if (originalUrl.includes('v=')) {
+      videoId = new URL(originalUrl).searchParams.get('v');
+    }
+
+    if (!videoId) {
+      await bot.sendMessage(chatId, '❌ Video ID topilmadi.');
+      return;
+    }
+
+    console.log('Katta video yuklanmoqda (yangi API):', videoId);
+
+    const apiOptions = {
+      method: 'GET',
+      url: `https://youtube-video-fast-downloader-24-7.p.rapidapi.com/download_video/${videoId}`,  
+      params: { quality: '247' },  
+      headers: {
+        'x-rapidapi-key': process.env.RAPID_API_KEY,
+        'x-rapidapi-host': 'youtube-video-fast-downloader-24-7.p.rapidapi.com'
+      }
+    };
+
+    const response = await axios.request(apiOptions);
+    const data = response.data;
+
+    console.log('API javobi (uzun video):', data);
+
+    if (data?.file) {
+      await bot.sendVideo(chatId, data.file, {
+        caption: options.caption || `<b>📍Reklama va obunasiz yuklandi ✅</b>\n${data.title || 'YouTube Video'}`,
+        parse_mode: 'HTML',
+        ...options.reply_markup && { reply_markup: options.reply_markup },
+        supports_streaming: true
+      });
+    } else if (data?.comment?.includes('soon be ready')) {
+      await bot.sendMessage(chatId, 'Video tayyorlanmoqda... 30–300 soniya kutib, qayta urinib ko‘ring.');
+    } else {
+      await bot.sendMessage(chatId, '❌ Yuklashda xatolik yuz berdi yoki video topilmadi.');
+    }
+
+  } catch (err) {
+    console.error('Uzun video yuklash xatosi:', err.message);
+    await bot.sendMessage(chatId, '❌ Katta video yuklab bo\'lmadi. Qayta urinib ko‘ring yoki boshqa havola yuboring.');
+  }
+}
+module.exports = { downloadMedia, downloadAndSendVideo, downloadAndSendLongVideo };
