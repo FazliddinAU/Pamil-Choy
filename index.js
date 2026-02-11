@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
-const { downloadMedia, downloadAndSendVideo, downloadAndSendLongVideo } = require('./request');
+const { downloadMedia, downloadAndSendVideo } = require('./request');
 
 const app = express();
 app.use(express.json());
@@ -67,7 +67,7 @@ bot.on('message', async (msg) => {
     let medias = [];
 
     if (isYouTube) {
-    await downloadAndSendLongVideo(bot, chatId, text, { 
+    await downloadAndSendVideo(bot, chatId, text, { 
     caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>`,
     parse_mode: 'HTML',
     ...shareLink
