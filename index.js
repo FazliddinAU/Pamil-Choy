@@ -103,7 +103,7 @@ bot.on('message', async (msg) => {
       const preferredVideo = videoMedias[0];
 
       if (preferredVideo) {
-      const captionText = '📍Reklama va obunasiz yuklab oling.✅';
+      const captionText = '📍Reklama va obunasiz yuklab oling.';
       
         await bot.sendVideo(chatId, preferredVideo.url, {
           caption: captionText,  
@@ -113,12 +113,6 @@ bot.on('message', async (msg) => {
               offset: 0,
               length: 2,
               custom_emoji_id: '5217806397537819501' 
-            },
-            {
-              type: 'custom_emoji',
-              offset: 34,
-              length: 1,
-              custom_emoji_id: '5217921777539258582' 
             }
           ],
           ...shareLink,
