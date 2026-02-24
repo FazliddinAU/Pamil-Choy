@@ -103,21 +103,21 @@ bot.on('message', async (msg) => {
       const preferredVideo = videoMedias[0];
 
       if (preferredVideo) {
-      const captionText = '📍Reklama va obunasiz yuklab oling.✅'; 
+      const captionText = '📍Reklama va obunasiz yuklab oling.✅';
       
         await bot.sendVideo(chatId, preferredVideo.url, {
-          caption: captionText + '\n' + (result.title || ''),
+          caption: captionText,  
           entities: [
             {
               type: 'custom_emoji',
-              offset: 0,        
-              length: 2,     
+              offset: 0,
+              length: 2,
               custom_emoji_id: '5217806397537819501' 
             },
             {
               type: 'custom_emoji',
-              offset: 34,         
-              length: 1,        
+              offset: 34,
+              length: 1,
               custom_emoji_id: '5217921777539258582' 
             }
           ],
@@ -125,11 +125,16 @@ bot.on('message', async (msg) => {
           supports_streaming: true
         });
       } else if (imageMedia && medias.length === 1) {
-        await bot.sendPhoto(chatId, imageMedia.url, {
-          caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>`,
-          parse_mode: 'HTML',
-          ...shareLink
-        });
+        const captionText = '📍Reklama va obunasiz yuklab oling.✅';
+        
+          await bot.sendPhoto(chatId, imageMedia.url, {
+            caption: captionText,
+            entities: [
+              { type: 'custom_emoji', offset: 0, length: 2, custom_emoji_id: '5217806397537819501' },
+              { type: 'custom_emoji', offset: 34, length: 1, custom_emoji_id: '5217921777539258582' }
+            ],
+            ...shareLink
+          });
       } else {
         const mediaGroup = [];
         const others = [];
@@ -170,24 +175,16 @@ bot.on('message', async (msg) => {
         }
 
         for (const url of others) {
-          await bot.sendVideo(chatId, url, {
-            caption: '📍Reklama va obunasiz yuklab oling.✅',
-            entities: [
-            {
-              type: 'custom_emoji',
-              offset: 0,         
-              length: 2,         
-              custom_emoji_id: '5217806397537819501'  
-            },
-            {
-              type: 'custom_emoji',
-              offset: 34,         
-              length: 1,          
-              custom_emoji_id: '5217921777539258582'  
-            }
-          ],
-            ...shareLink
-          });
+        const captionText = '📍Reklama va obunasiz yuklab oling.✅';
+        
+        await bot.sendVideo(chatId, url, {
+          caption: captionText,
+          entities: [
+                { type: 'custom_emoji', offset: 0, length: 2, custom_emoji_id: '5217806397537819501' },
+                { type: 'custom_emoji', offset: 34, length: 1, custom_emoji_id: '5217921777539258582' }
+              ],
+              ...shareLink
+            });
         }
       }
     }
