@@ -169,14 +169,31 @@ bot.on('message', async (msg) => {
         }
 
         for (const url of others) {
-        const captionText = '📍Reklama va obunasiz yuklab oling.✅';
+          const captionText = 'Assalomu alaykum! ❤️🔥✨';
+          const entities = [
+            {
+              type: 'custom_emoji',
+              offset: 18,  
+              length: 2,    
+              custom_emoji_id: '5217921777539258582' 
+            },
+            {
+              type: 'custom_emoji',
+              offset: 20,  
+              length: 2,
+              custom_emoji_id: '5769207437303221627'  
+            },
+            {
+              type: 'custom_emoji',
+              offset: 22,   
+              length: 1,    
+              custom_emoji_id: '5767181260711529934'
+            }
+          ];
         
         await bot.sendVideo(chatId, url, {
           caption: captionText,
-          entities: [
-                { type: 'custom_emoji', offset: 0, length: 2, custom_emoji_id: '5217806397537819501' },
-                { type: 'custom_emoji', offset: 34, length: 1, custom_emoji_id: '5217921777539258582' }
-              ],
+          entities,
               ...shareLink
             });
         }
