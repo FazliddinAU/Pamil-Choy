@@ -106,6 +106,20 @@ bot.on('message', async (msg) => {
         await bot.sendVideo(chatId, preferredVideo.url, {
           caption: `<b>📍Reklama va obunasiz yuklab oling.✅</b>\n${result.title ? `<b>${result.title}</b>` : ''}`,
           parse_mode: 'HTML',
+          entities: [
+          {
+            type: 'custom_emoji',
+            offset: 3,      
+            length: 2,  
+            custom_emoji_id: '5217806397537819501' 
+          },
+          {
+            type: 'custom_emoji',
+            offset: 37,        
+            length: 1,      
+            custom_emoji_id: '5217921777539258582'
+          }
+        ],
           ...shareLink,
           supports_streaming: true
         });
